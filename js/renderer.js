@@ -169,51 +169,117 @@ export class Renderer {
     }
 
     /**
-     * Draw the bird
+     * Draw the vitamin C bottle (replaces bird)
      */
     drawBird(gameState) {
         const ctx = this.ctx;
         const bird = gameState.bird;
 
-        // Bird body (circle)
-        ctx.fillStyle = this.colors.bird;
-        ctx.strokeStyle = this.colors.birdOutline;
-        ctx.lineWidth = 3;
+        // Scale bottle based on bird radius
+        const scale = bird.radius / 25;
+        const bottleWidth = 50 * scale;
+        const bottleHeight = 70 * scale;
+        const capHeight = 10 * scale;
+        const cornerRadius = 8 * scale;
 
-        ctx.beginPath();
-        ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+        // Center the bottle on bird position
+        const x = bird.x - bottleWidth / 2;
+        const y = bird.y - bottleHeight / 2;
+
+        // Colors matching the vitamin C bottle
+        const tealColor = '#2A8B8B';
+        const tealDark = '#1F6B6B';
+        const orangeColor = '#F5A623';
+        const orangeDark = '#E09000';
+        const capColor = '#1F6B6B';
+
+        ctx.save();
+
+        // Draw bottle cap
+        ctx.fillStyle = capColor;
+        this.roundedRect(ctx, x + bottleWidth * 0.15, y - capHeight, bottleWidth * 0.7, capHeight + 2, cornerRadius / 2, cornerRadius / 2, 0, 0);
         ctx.fill();
+
+        // Draw cap rim
+        ctx.fillStyle = tealDark;
+        ctx.fillRect(x + bottleWidth * 0.1, y, bottleWidth * 0.8, 3 * scale);
+
+        // Draw main bottle body - teal upper section (60% of bottle)
+        const tealHeight = bottleHeight * 0.6;
+        ctx.fillStyle = tealColor;
+        this.roundedRect(ctx, x, y, bottleWidth, tealHeight + 5, cornerRadius, cornerRadius, 0, 0);
+        ctx.fill();
+
+        // Draw orange lower section (40% of bottle)
+        const orangeY = y + tealHeight;
+        const orangeHeight = bottleHeight * 0.4;
+        ctx.fillStyle = orangeColor;
+        this.roundedRect(ctx, x, orangeY - 5, bottleWidth, orangeHeight + 5, 0, 0, cornerRadius, cornerRadius);
+        ctx.fill();
+
+        // Add subtle bottle outline
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 1;
+        this.roundedRect(ctx, x, y, bottleWidth, bottleHeight, cornerRadius, cornerRadius, cornerRadius, cornerRadius);
         ctx.stroke();
 
-        // Eye
+        // Draw "H&B" logo
         ctx.fillStyle = '#FFFFFF';
-        ctx.beginPath();
-        ctx.arc(bird.x + bird.radius * 0.3, bird.y - bird.radius * 0.2,
-                bird.radius * 0.3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.font = `bold ${10 * scale}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('H&B', bird.x, y + 14 * scale);
 
-        // Pupil
-        ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.arc(bird.x + bird.radius * 0.4, bird.y - bird.radius * 0.2,
-                bird.radius * 0.15, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw "HIGH STRENGTH" text
+        ctx.font = `${5 * scale}px Arial`;
+        ctx.fillText('HIGH STRENGTH', bird.x, y + 22 * scale);
 
-        // Beak
-        ctx.fillStyle = '#FF6347';
+        // Draw "Vitamin C" text
+        ctx.font = `bold ${8 * scale}px Arial`;
+        ctx.fillText('Vitamin C', bird.x, y + 32 * scale);
+
+        // Draw "1000mg" text
+        ctx.font = `bold ${9 * scale}px Arial`;
+        ctx.fillText('1000mg', bird.x, y + 42 * scale);
+
+        // Draw "1 A DAY" text on orange section
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `${5 * scale}px Arial`;
+        ctx.fillText('1 A DAY', bird.x, orangeY + 10 * scale);
+
+        // Draw "240 TABLETS" text
+        ctx.font = `bold ${6 * scale}px Arial`;
+        ctx.fillText('240 TABLETS', bird.x, orangeY + 18 * scale);
+
+        // Draw "VEGAN" badge
+        ctx.fillStyle = tealColor;
+        const badgeWidth = 22 * scale;
+        const badgeHeight = 6 * scale;
+        const badgeX = bird.x - badgeWidth / 2;
+        const badgeY = orangeY + 22 * scale;
+        this.roundedRect(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 2, 2, 2, 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `bold ${4 * scale}px Arial`;
+        ctx.fillText('VEGAN', bird.x, badgeY + 5 * scale);
+
+        ctx.restore();
+    }
+
+    /**
+     * Helper to draw rounded rectangles with different corner radii
+     */
+    roundedRect(ctx, x, y, width, height, tlRadius, trRadius, brRadius, blRadius) {
         ctx.beginPath();
-        ctx.moveTo(bird.x + bird.radius, bird.y);
-        ctx.lineTo(bird.x + bird.radius + 15, bird.y + 5);
-        ctx.lineTo(bird.x + bird.radius, bird.y + 10);
+        ctx.moveTo(x + tlRadius, y);
+        ctx.lineTo(x + width - trRadius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + trRadius);
+        ctx.lineTo(x + width, y + height - brRadius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - brRadius, y + height);
+        ctx.lineTo(x + blRadius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - blRadius);
+        ctx.lineTo(x, y + tlRadius);
+        ctx.quadraticCurveTo(x, y, x + tlRadius, y);
         ctx.closePath();
-        ctx.fill();
-
-        // Wing
-        ctx.fillStyle = this.colors.birdOutline;
-        ctx.beginPath();
-        ctx.ellipse(bird.x - bird.radius * 0.2, bird.y + bird.radius * 0.1,
-                   bird.radius * 0.5, bird.radius * 0.3, -0.3, 0, Math.PI * 2);
-        ctx.fill();
     }
 
     /**
@@ -319,7 +385,7 @@ export class Renderer {
 
         // Instructions
         ctx.font = '24px Arial';
-        ctx.fillText('Do push-ups to control the bird!', width / 2, height / 2);
+        ctx.fillText('Do push-ups to control the vitamin bottle!', width / 2, height / 2);
         ctx.fillText('Move up and down to start', width / 2, height / 2 + 40);
 
         // High score
