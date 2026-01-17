@@ -16,7 +16,7 @@ If the user *is* technical, they'll let you know - then you can be more detailed
 A browser-based Flappy Bird clone where the player's push-up movements (detected via webcam) control the bird. Uses MediaPipe Pose for real-time pose detection. Frontend runs client-side, with a Cloudflare Worker backend for leaderboard.
 
 **Live site:** https://flappy-push-up.pages.dev
-**API:** https://flappy-push-up-api.jerome3o.workers.dev
+**API:** https://flappy-push-up-api.jeromeswannack.workers.dev
 **Repo:** https://github.com/jerome3o/flappy-push-up
 
 ## Architecture
@@ -80,7 +80,7 @@ For phone testing: use your local IP (e.g., `http://192.168.x.x:8000`), phone mu
 
 **Hosted on Cloudflare:**
 - **Pages** (frontend): https://flappy-push-up.pages.dev
-- **Worker** (API): https://flappy-push-up-api.jerome3o.workers.dev
+- **Worker** (API): https://flappy-push-up-api.jeromeswannack.workers.dev
 - **D1 Database**: `flappy-push-up-db`
 
 Auto-deploys on push to `main` via GitHub Actions.

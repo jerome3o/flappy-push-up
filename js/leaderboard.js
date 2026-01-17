@@ -3,8 +3,8 @@
  * Communicates with the Cloudflare Worker backend
  */
 
-// API base URL - Worker will be at this URL
-const API_BASE = 'https://flappy-push-up-api.jerome3o.workers.dev';
+// API base URL - Worker deployed to Cloudflare
+const API_BASE = 'https://flappy-push-up-api.jeromeswannack.workers.dev';
 
 export class LeaderboardAPI {
     constructor() {
