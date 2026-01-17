@@ -6,6 +6,7 @@
 import { PoseDetector } from './pose.js';
 import { FlappyGame, GameState } from './game.js';
 import { Renderer } from './renderer.js';
+import { LeaderboardAPI } from './leaderboard.js';
 
 class FlappyPushupApp {
     constructor() {
@@ -15,6 +16,7 @@ class FlappyPushupApp {
         this.poseDetector = null;
         this.game = null;
         this.renderer = null;
+        this.leaderboardAPI = new LeaderboardAPI();
 
         this.lastFrameTime = 0;
         this.isRunning = false;
@@ -25,9 +27,26 @@ class FlappyPushupApp {
         this.movementDetected = false;
         this.movementCooldown = 0;
 
+        // Leaderboard state
+        this.leaderboard = [];
+        this.percentile = null;
+        this.rank = null;
+        this.scoreSubmitted = false;
+        this.showingNameModal = false;
+        this.lastGameOverScore = null;
+
+        // Modal elements
+        this.nameModal = document.getElementById('name-modal');
+        this.nameInput = document.getElementById('name-input');
+        this.modalScore = document.getElementById('modal-score');
+        this.submitBtn = document.getElementById('submit-btn');
+        this.skipBtn = document.getElementById('skip-btn');
+
         // Bind methods
         this.gameLoop = this.gameLoop.bind(this);
         this.handleResize = this.handleResize.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+        this.handleSkip = this.handleSkip.bind(this);
     }
 
     async initialize() {
@@ -37,6 +56,13 @@ class FlappyPushupApp {
             // Set up canvas size
             this.handleResize();
             window.addEventListener('resize', this.handleResize);
+
+            // Set up modal event listeners
+            this.submitBtn.addEventListener('click', this.handleSubmit);
+            this.skipBtn.addEventListener('click', this.handleSkip);
+            this.nameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.handleSubmit();
+            });
 
             // Initialize game and renderer
             this.game = new FlappyGame(this.canvas.width, this.canvas.height);
@@ -57,6 +83,9 @@ class FlappyPushupApp {
 
             console.log('Pose detection initialized');
 
+            // Pre-fetch leaderboard
+            this.fetchLeaderboard();
+
             // Start game loop
             this.isRunning = true;
             this.lastFrameTime = performance.now();
@@ -68,6 +97,14 @@ class FlappyPushupApp {
         } catch (error) {
             console.error('Initialization failed:', error);
             this.showErrorMessage(error.message);
+        }
+    }
+
+    async fetchLeaderboard() {
+        try {
+            this.leaderboard = await this.leaderboardAPI.getLeaderboard();
+        } catch (error) {
+            console.error('Failed to fetch leaderboard:', error);
         }
     }
 
@@ -185,20 +222,94 @@ class FlappyPushupApp {
 
     handleStateTransitions() {
         const state = this.game.state;
+        const score = this.game.score;
 
         if (state === GameState.WAITING && this.movementDetected) {
             // Start game when movement detected in waiting state
             this.game.start();
             this.movementDetected = false;
-        } else if (state === GameState.GAME_OVER && this.movementDetected) {
-            // Restart game when movement detected in game over state
-            this.game.reset();
-            this.movementDetected = false;
+            // Reset leaderboard state for new game
+            this.scoreSubmitted = false;
+            this.percentile = null;
+            this.rank = null;
+        } else if (state === GameState.GAME_OVER) {
+            // Show name modal if this is a new game over and score > 0
+            if (score !== this.lastGameOverScore && score > 0 && !this.showingNameModal) {
+                this.lastGameOverScore = score;
+                this.showNameModal(score);
+            }
+
+            // Only allow restart if not showing modal and movement detected
+            if (!this.showingNameModal && this.movementDetected) {
+                this.game.reset();
+                this.movementDetected = false;
+                this.lastGameOverScore = null;
+                this.scoreSubmitted = false;
+                this.percentile = null;
+                this.rank = null;
+            }
         }
+    }
+
+    showNameModal(score) {
+        this.showingNameModal = true;
+        this.modalScore.textContent = `Score: ${score}`;
+        this.nameInput.value = localStorage.getItem('flappyPushupName') || '';
+        this.nameModal.classList.remove('hidden');
+        this.nameInput.focus();
+    }
+
+    hideNameModal() {
+        this.showingNameModal = false;
+        this.nameModal.classList.add('hidden');
+    }
+
+    async handleSubmit() {
+        const name = this.nameInput.value.trim();
+        if (!name) {
+            this.nameInput.focus();
+            return;
+        }
+
+        // Save name for next time
+        localStorage.setItem('flappyPushupName', name);
+
+        // Disable buttons during submission
+        this.submitBtn.disabled = true;
+        this.submitBtn.textContent = 'Submitting...';
+
+        try {
+            const result = await this.leaderboardAPI.submitScore(name, this.lastGameOverScore);
+
+            this.percentile = result.percentile;
+            this.rank = result.rank;
+            this.leaderboard = result.leaderboard || this.leaderboard;
+            this.scoreSubmitted = true;
+
+        } catch (error) {
+            console.error('Failed to submit score:', error);
+        }
+
+        this.submitBtn.disabled = false;
+        this.submitBtn.textContent = 'Submit';
+        this.hideNameModal();
+    }
+
+    handleSkip() {
+        // Just fetch leaderboard without submitting
+        this.fetchLeaderboard();
+        this.hideNameModal();
     }
 
     render() {
         const gameState = this.game.getState();
+
+        // Add leaderboard data to game state for rendering
+        gameState.leaderboard = this.leaderboard;
+        gameState.percentile = this.percentile;
+        gameState.rank = this.rank;
+        gameState.scoreSubmitted = this.scoreSubmitted;
+
         this.renderer.render(gameState);
     }
 }

@@ -1,4 +1,4 @@
-name: Deploy to Cloudflare Pages
+name: Deploy to Cloudflare
 
 on:
   push:
@@ -11,6 +11,9 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,8 +26,43 @@ jobs:
       - name: Install Wrangler
         run: npm install -g wrangler
 
+      # D1 Database setup
+      - name: Create D1 database if not exists
+        id: d1
+        run: |
+          # Check if database exists
+          DB_LIST=$(wrangler d1 list --json 2>/dev/null || echo "[]")
+          DB_ID=$(echo "$DB_LIST" | jq -r '.[] | select(.name == "flappy-push-up-db") | .uuid')
+
+          if [ -z "$DB_ID" ] || [ "$DB_ID" == "null" ]; then
+            echo "Creating new D1 database..."
+            CREATE_OUTPUT=$(wrangler d1 create flappy-push-up-db --json)
+            DB_ID=$(echo "$CREATE_OUTPUT" | jq -r '.uuid')
+            echo "Created database with ID: $DB_ID"
+          else
+            echo "Database already exists with ID: $DB_ID"
+          fi
+
+          echo "database_id=$DB_ID" >> $GITHUB_OUTPUT
+
+      - name: Update wrangler.toml with database ID
+        run: |
+          sed -i "s/placeholder-will-be-set-by-workflow/${{ steps.d1.outputs.database_id }}/" worker/wrangler.toml
+          cat worker/wrangler.toml
+
+      - name: Apply D1 schema
+        run: |
+          cd worker
+          wrangler d1 execute flappy-push-up-db --file=schema.sql --remote
+
+      # Deploy Worker
+      - name: Deploy Worker
+        run: |
+          cd worker
+          wrangler deploy
+
+      # Deploy Pages (frontend)
       - name: Deploy to Cloudflare Pages
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: wrangler pages deploy . --project-name=flappy-push-up --commit-dirty=true
+        run: |
+          # Exclude worker directory from pages deployment
+          wrangler pages deploy . --project-name=flappy-push-up --commit-dirty=true

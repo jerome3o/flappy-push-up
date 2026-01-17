@@ -404,7 +404,7 @@ export class Renderer {
     }
 
     /**
-     * Draw game over screen
+     * Draw game over screen with leaderboard
      */
     drawGameOverScreen(gameState) {
         const ctx = this.ctx;
@@ -412,34 +412,126 @@ export class Renderer {
         const height = this.canvas.height;
 
         // Semi-transparent overlay
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
         ctx.fillRect(0, 0, width, height);
 
+        // Layout: left side = score info, right side = leaderboard
+        const leftX = width * 0.28;
+        const rightX = width * 0.72;
+
+        // === LEFT SIDE: Score Info ===
+
         // Game Over text
-        ctx.font = 'bold 56px Arial';
+        ctx.font = 'bold 42px Arial';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FF6347';
-        ctx.fillText('GAME OVER', width / 2, height / 3);
+        ctx.fillText('GAME OVER', leftX, 80);
 
         // Score
-        ctx.font = 'bold 36px Arial';
+        ctx.font = 'bold 64px Arial';
         ctx.fillStyle = this.colors.text;
-        ctx.fillText(`Score: ${gameState.score}`, width / 2, height / 2);
+        ctx.fillText(gameState.score.toString(), leftX, 160);
+
+        ctx.font = '20px Arial';
+        ctx.fillStyle = '#888888';
+        ctx.fillText('SCORE', leftX, 185);
+
+        // Percentile (if available)
+        if (gameState.percentile !== null && gameState.percentile !== undefined) {
+            ctx.font = 'bold 28px Arial';
+            ctx.fillStyle = '#00FFAA';
+            ctx.fillText(`You beat ${gameState.percentile}% of players!`, leftX, 240);
+        }
+
+        // Rank (if made leaderboard)
+        if (gameState.rank) {
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = '#FFD700';
+            ctx.fillText(`#${gameState.rank} on leaderboard!`, leftX, 280);
+        }
 
         // High score
+        ctx.font = '20px Arial';
         if (gameState.score >= gameState.highScore && gameState.score > 0) {
-            ctx.font = 'bold 28px Arial';
             ctx.fillStyle = '#FFD700';
-            ctx.fillText('NEW HIGH SCORE!', width / 2, height / 2 + 50);
+            ctx.fillText('NEW PERSONAL BEST!', leftX, 330);
         } else {
-            ctx.font = '24px Arial';
-            ctx.fillStyle = '#FFD700';
-            ctx.fillText(`High Score: ${gameState.highScore}`, width / 2, height / 2 + 50);
+            ctx.fillStyle = '#888888';
+            ctx.fillText(`Personal Best: ${gameState.highScore}`, leftX, 330);
+        }
+
+        // Submit prompt or status
+        ctx.font = '18px Arial';
+        if (gameState.scoreSubmitted) {
+            ctx.fillStyle = '#00FF00';
+            ctx.fillText('Score submitted!', leftX, 380);
+        } else if (gameState.score > 0) {
+            ctx.fillStyle = '#FFFF00';
+            ctx.fillText('Enter name above to submit score', leftX, 380);
         }
 
         // Restart instruction
-        ctx.font = '24px Arial';
+        ctx.font = '22px Arial';
         ctx.fillStyle = this.colors.text;
-        ctx.fillText('Do a push-up to restart', width / 2, height / 2 + 120);
+        ctx.fillText('Push up to play again', leftX, height - 40);
+
+        // === RIGHT SIDE: Leaderboard ===
+
+        ctx.font = 'bold 28px Arial';
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText('LEADERBOARD', rightX, 80);
+
+        const leaderboard = gameState.leaderboard || [];
+        const startY = 120;
+        const lineHeight = 32;
+        const maxDisplay = Math.min(leaderboard.length, 10);
+
+        if (leaderboard.length === 0) {
+            ctx.font = '18px Arial';
+            ctx.fillStyle = '#888888';
+            ctx.fillText('No scores yet!', rightX, startY + 20);
+            ctx.fillText('Be the first!', rightX, startY + 50);
+        } else {
+            for (let i = 0; i < maxDisplay; i++) {
+                const entry = leaderboard[i];
+                const y = startY + i * lineHeight;
+                const isCurrentPlayer = gameState.rank === i + 1;
+
+                // Highlight current player's entry
+                if (isCurrentPlayer) {
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.2)';
+                    ctx.fillRect(rightX - 140, y - 20, 280, lineHeight);
+                }
+
+                // Rank
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillStyle = i < 3 ? '#FFD700' : '#FFFFFF';
+                ctx.fillText(`${i + 1}.`, rightX - 100, y);
+
+                // Name
+                ctx.font = '18px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillStyle = isCurrentPlayer ? '#00FFAA' : '#FFFFFF';
+                const displayName = entry.name.length > 12 ? entry.name.slice(0, 12) + '...' : entry.name;
+                ctx.fillText(displayName, rightX - 90, y);
+
+                // Score
+                ctx.textAlign = 'right';
+                ctx.fillStyle = isCurrentPlayer ? '#00FFAA' : '#AAAAAA';
+                ctx.fillText(entry.score.toString(), rightX + 130, y);
+            }
+
+            // Show "and X more" if there are more entries
+            if (leaderboard.length > maxDisplay) {
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#666666';
+                ctx.fillText(`and ${leaderboard.length - maxDisplay} more...`, rightX, startY + maxDisplay * lineHeight + 10);
+            }
+        }
+
+        // Reset text align
+        ctx.textAlign = 'center';
     }
 }
