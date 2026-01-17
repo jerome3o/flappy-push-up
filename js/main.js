@@ -27,11 +27,17 @@ class FlappyPushupApp {
         this.movementDetected = false;
         this.movementCooldown = 0;
 
+        // Game over cooldown (frames to wait before allowing restart)
+        this.gameOverCooldown = 0;
+        this.GAME_OVER_COOLDOWN_FRAMES = 120; // ~2 seconds at 60fps
+        this.lastGameState = null;
+
         // Leaderboard state
         this.leaderboard = [];
         this.percentile = null;
         this.rank = null;
         this.scoreSubmitted = false;
+        this.leaderboardFetched = false;
 
         // Submit form elements
         this.submitForm = document.getElementById('submit-form');
@@ -99,9 +105,13 @@ class FlappyPushupApp {
 
     async fetchLeaderboard() {
         try {
+            console.log('Fetching leaderboard...');
             this.leaderboard = await this.leaderboardAPI.getLeaderboard();
+            this.leaderboardFetched = true;
+            console.log('Leaderboard fetched:', this.leaderboard.length, 'entries');
         } catch (error) {
             console.error('Failed to fetch leaderboard:', error);
+            this.leaderboardFetched = true; // Mark as fetched even on error to prevent retry spam
         }
     }
 
@@ -220,6 +230,25 @@ class FlappyPushupApp {
     handleStateTransitions() {
         const state = this.game.state;
 
+        // Detect state change to GAME_OVER
+        if (state === GameState.GAME_OVER && this.lastGameState !== GameState.GAME_OVER) {
+            // Just entered game over - start cooldown
+            this.gameOverCooldown = this.GAME_OVER_COOLDOWN_FRAMES;
+            this.movementDetected = false; // Clear any pending movement
+            console.log('Game over - cooldown started');
+
+            // Fetch leaderboard if not already fetched
+            if (!this.leaderboardFetched) {
+                this.fetchLeaderboard();
+            }
+        }
+        this.lastGameState = state;
+
+        // Decrease game over cooldown
+        if (this.gameOverCooldown > 0) {
+            this.gameOverCooldown--;
+        }
+
         if (state === GameState.WAITING) {
             // Hide submit form when waiting
             this.submitForm.classList.add('hidden');
@@ -244,13 +273,8 @@ class FlappyPushupApp {
                 this.submitForm.classList.add('hidden');
             }
 
-            // Fetch leaderboard on first game over
-            if (this.leaderboard.length === 0) {
-                this.fetchLeaderboard();
-            }
-
-            // Allow restart with movement (non-blocking)
-            if (this.movementDetected) {
+            // Only allow restart after cooldown period
+            if (this.gameOverCooldown === 0 && this.movementDetected) {
                 this.game.reset();
                 this.movementDetected = false;
                 this.scoreSubmitted = false;
