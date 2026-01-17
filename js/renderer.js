@@ -460,14 +460,11 @@ export class Renderer {
             ctx.fillText(`Personal Best: ${gameState.highScore}`, leftX, 330);
         }
 
-        // Submit prompt or status
+        // Submit status
         ctx.font = '18px Arial';
         if (gameState.scoreSubmitted) {
             ctx.fillStyle = '#00FF00';
             ctx.fillText('Score submitted!', leftX, 380);
-        } else if (gameState.score > 0) {
-            ctx.fillStyle = '#FFFF00';
-            ctx.fillText('Enter name above to submit score', leftX, 380);
         }
 
         // Restart instruction

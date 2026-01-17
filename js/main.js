@@ -32,21 +32,16 @@ class FlappyPushupApp {
         this.percentile = null;
         this.rank = null;
         this.scoreSubmitted = false;
-        this.showingNameModal = false;
-        this.lastGameOverScore = null;
 
-        // Modal elements
-        this.nameModal = document.getElementById('name-modal');
+        // Submit form elements
+        this.submitForm = document.getElementById('submit-form');
         this.nameInput = document.getElementById('name-input');
-        this.modalScore = document.getElementById('modal-score');
         this.submitBtn = document.getElementById('submit-btn');
-        this.skipBtn = document.getElementById('skip-btn');
 
         // Bind methods
         this.gameLoop = this.gameLoop.bind(this);
         this.handleResize = this.handleResize.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
-        this.handleSkip = this.handleSkip.bind(this);
     }
 
     async initialize() {
@@ -57,12 +52,14 @@ class FlappyPushupApp {
             this.handleResize();
             window.addEventListener('resize', this.handleResize);
 
-            // Set up modal event listeners
+            // Set up submit form event listeners
             this.submitBtn.addEventListener('click', this.handleSubmit);
-            this.skipBtn.addEventListener('click', this.handleSkip);
             this.nameInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') this.handleSubmit();
             });
+
+            // Load saved name
+            this.nameInput.value = localStorage.getItem('flappyPushupName') || '';
 
             // Initialize game and renderer
             this.game = new FlappyGame(this.canvas.width, this.canvas.height);
@@ -222,46 +219,46 @@ class FlappyPushupApp {
 
     handleStateTransitions() {
         const state = this.game.state;
-        const score = this.game.score;
 
-        if (state === GameState.WAITING && this.movementDetected) {
-            // Start game when movement detected in waiting state
-            this.game.start();
-            this.movementDetected = false;
-            // Reset leaderboard state for new game
-            this.scoreSubmitted = false;
-            this.percentile = null;
-            this.rank = null;
-        } else if (state === GameState.GAME_OVER) {
-            // Show name modal if this is a new game over and score > 0
-            if (score !== this.lastGameOverScore && score > 0 && !this.showingNameModal) {
-                this.lastGameOverScore = score;
-                this.showNameModal(score);
-            }
+        if (state === GameState.WAITING) {
+            // Hide submit form when waiting
+            this.submitForm.classList.add('hidden');
 
-            // Only allow restart if not showing modal and movement detected
-            if (!this.showingNameModal && this.movementDetected) {
-                this.game.reset();
+            if (this.movementDetected) {
+                // Start game when movement detected in waiting state
+                this.game.start();
                 this.movementDetected = false;
-                this.lastGameOverScore = null;
+                // Reset leaderboard state for new game
                 this.scoreSubmitted = false;
                 this.percentile = null;
                 this.rank = null;
             }
+        } else if (state === GameState.PLAYING) {
+            // Hide submit form while playing
+            this.submitForm.classList.add('hidden');
+        } else if (state === GameState.GAME_OVER) {
+            // Show submit form if score > 0 and not yet submitted
+            if (this.game.score > 0 && !this.scoreSubmitted) {
+                this.submitForm.classList.remove('hidden');
+            } else {
+                this.submitForm.classList.add('hidden');
+            }
+
+            // Fetch leaderboard on first game over
+            if (this.leaderboard.length === 0) {
+                this.fetchLeaderboard();
+            }
+
+            // Allow restart with movement (non-blocking)
+            if (this.movementDetected) {
+                this.game.reset();
+                this.movementDetected = false;
+                this.scoreSubmitted = false;
+                this.percentile = null;
+                this.rank = null;
+                this.submitForm.classList.add('hidden');
+            }
         }
-    }
-
-    showNameModal(score) {
-        this.showingNameModal = true;
-        this.modalScore.textContent = `Score: ${score}`;
-        this.nameInput.value = localStorage.getItem('flappyPushupName') || '';
-        this.nameModal.classList.remove('hidden');
-        this.nameInput.focus();
-    }
-
-    hideNameModal() {
-        this.showingNameModal = false;
-        this.nameModal.classList.add('hidden');
     }
 
     async handleSubmit() {
@@ -274,31 +271,27 @@ class FlappyPushupApp {
         // Save name for next time
         localStorage.setItem('flappyPushupName', name);
 
-        // Disable buttons during submission
+        // Disable button during submission
         this.submitBtn.disabled = true;
         this.submitBtn.textContent = 'Submitting...';
 
         try {
-            const result = await this.leaderboardAPI.submitScore(name, this.lastGameOverScore);
+            const result = await this.leaderboardAPI.submitScore(name, this.game.score);
 
             this.percentile = result.percentile;
             this.rank = result.rank;
             this.leaderboard = result.leaderboard || this.leaderboard;
             this.scoreSubmitted = true;
 
+            // Hide form after successful submit
+            this.submitForm.classList.add('hidden');
+
         } catch (error) {
             console.error('Failed to submit score:', error);
         }
 
         this.submitBtn.disabled = false;
-        this.submitBtn.textContent = 'Submit';
-        this.hideNameModal();
-    }
-
-    handleSkip() {
-        // Just fetch leaderboard without submitting
-        this.fetchLeaderboard();
-        this.hideNameModal();
+        this.submitBtn.textContent = 'Submit Score';
     }
 
     render() {

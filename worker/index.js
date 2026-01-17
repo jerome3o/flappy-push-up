@@ -18,13 +18,26 @@ export default {
 	async fetch(request, env) {
 		// Handle CORS preflight
 		if (request.method === 'OPTIONS') {
-			return new Response(null, { headers: CORS_HEADERS });
+			return new Response(null, {
+				status: 204,
+				headers: CORS_HEADERS
+			});
 		}
 
 		const url = new URL(request.url);
 		const path = url.pathname;
 
 		try {
+			// Health check (no DB required)
+			if (path === '/api/health') {
+				return jsonResponse({ status: 'ok' });
+			}
+
+			// Check if DB is available
+			if (!env.DB) {
+				return jsonResponse({ error: 'Database not configured' }, 503);
+			}
+
 			// Route requests
 			if (path === '/api/leaderboard' && request.method === 'GET') {
 				return await getLeaderboard(env);
@@ -38,16 +51,11 @@ export default {
 				return await getStats(env);
 			}
 
-			// Health check
-			if (path === '/api/health') {
-				return jsonResponse({ status: 'ok' });
-			}
-
 			return jsonResponse({ error: 'Not found' }, 404);
 
 		} catch (error) {
-			console.error('Error:', error);
-			return jsonResponse({ error: 'Internal server error' }, 500);
+			console.error('Error:', error.message, error.stack);
+			return jsonResponse({ error: 'Internal server error', details: error.message }, 500);
 		}
 	}
 };
@@ -56,16 +64,22 @@ export default {
  * Get top 100 leaderboard entries
  */
 async function getLeaderboard(env) {
-	const results = await env.DB.prepare(`
-		SELECT name, score, created_at
-		FROM leaderboard
-		ORDER BY score DESC, created_at ASC
-		LIMIT ?
-	`).bind(MAX_LEADERBOARD).all();
+	try {
+		const results = await env.DB.prepare(`
+			SELECT name, score, created_at
+			FROM leaderboard
+			ORDER BY score DESC, created_at ASC
+			LIMIT ?
+		`).bind(MAX_LEADERBOARD).all();
 
-	return jsonResponse({
-		leaderboard: results.results || []
-	});
+		return jsonResponse({
+			leaderboard: results.results || []
+		});
+	} catch (error) {
+		console.error('getLeaderboard error:', error);
+		// Return empty leaderboard on error (table might not exist yet)
+		return jsonResponse({ leaderboard: [] });
+	}
 }
 
 /**

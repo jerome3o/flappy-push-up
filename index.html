@@ -13,17 +13,10 @@
         <video id="video" autoplay playsinline muted></video>
         <canvas id="canvas"></canvas>
 
-        <!-- Name input modal (shown on game over) -->
-        <div id="name-modal" class="modal hidden">
-            <div class="modal-content">
-                <h2>Submit Your Score!</h2>
-                <p id="modal-score"></p>
-                <input type="text" id="name-input" placeholder="Enter your name" maxlength="20" autocomplete="off">
-                <div class="modal-buttons">
-                    <button id="submit-btn">Submit</button>
-                    <button id="skip-btn">Skip</button>
-                </div>
-            </div>
+        <!-- Score submission form (shown on game over, non-blocking) -->
+        <div id="submit-form" class="submit-form hidden">
+            <input type="text" id="name-input" placeholder="Your name" maxlength="20" autocomplete="off">
+            <button id="submit-btn">Submit Score</button>
         </div>
     </div>
 
