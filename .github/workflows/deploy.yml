@@ -36,8 +36,11 @@ jobs:
 
           if [ -z "$DB_ID" ] || [ "$DB_ID" == "null" ]; then
             echo "Creating new D1 database..."
-            CREATE_OUTPUT=$(wrangler d1 create flappy-push-up-db --json)
-            DB_ID=$(echo "$CREATE_OUTPUT" | jq -r '.uuid')
+            wrangler d1 create flappy-push-up-db
+            # Fetch the ID after creation
+            sleep 2
+            DB_LIST=$(wrangler d1 list --json)
+            DB_ID=$(echo "$DB_LIST" | jq -r '.[] | select(.name == "flappy-push-up-db") | .uuid')
             echo "Created database with ID: $DB_ID"
           else
             echo "Database already exists with ID: $DB_ID"
