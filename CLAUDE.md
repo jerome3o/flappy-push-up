@@ -1,5 +1,16 @@
 # Flappy Push-up - Claude Agent Guide
 
+## Communicating with Users
+
+**The user is likely NOT a software developer.** When talking to them:
+- Explain what you're doing in plain language
+- Avoid unnecessary technical jargon
+- Focus on what the change does for them, not implementation details
+- If something goes wrong, explain it simply and what you'll do to fix it
+- When done, tell them how to see/use the result (e.g., "refresh the page" or "it's live at [URL]")
+
+If the user *is* technical, they'll let you know - then you can be more detailed.
+
 ## Project Overview
 
 A browser-based Flappy Bird clone where the player's push-up movements (detected via webcam) control the bird. Uses MediaPipe Pose for real-time pose detection, runs 100% client-side.
