@@ -467,11 +467,6 @@ export class Renderer {
             ctx.fillText('Score submitted!', leftX, 380);
         }
 
-        // Restart instruction
-        ctx.font = '22px Arial';
-        ctx.fillStyle = this.colors.text;
-        ctx.fillText('Push up to play again', leftX, height - 40);
-
         // === RIGHT SIDE: Leaderboard ===
 
         ctx.font = 'bold 28px Arial';

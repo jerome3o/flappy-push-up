@@ -116,3 +116,34 @@ body {
     color: #999;
     cursor: not-allowed;
 }
+
+/* Play again button */
+.play-again-btn {
+    position: absolute;
+    bottom: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 14px 32px;
+    font-size: 18px;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #4CAF50;
+    color: #FFF;
+    z-index: 100;
+    transition: transform 0.1s, background 0.1s;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+.play-again-btn:hover {
+    background: #45a049;
+}
+
+.play-again-btn:active {
+    transform: translateX(-50%) scale(0.95);
+}
+
+.play-again-btn.hidden {
+    display: none;
+}

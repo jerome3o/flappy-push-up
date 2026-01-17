@@ -43,11 +43,13 @@ class FlappyPushupApp {
         this.submitForm = document.getElementById('submit-form');
         this.nameInput = document.getElementById('name-input');
         this.submitBtn = document.getElementById('submit-btn');
+        this.playAgainBtn = document.getElementById('play-again-btn');
 
         // Bind methods
         this.gameLoop = this.gameLoop.bind(this);
         this.handleResize = this.handleResize.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
+        this.handlePlayAgain = this.handlePlayAgain.bind(this);
     }
 
     async initialize() {
@@ -63,6 +65,9 @@ class FlappyPushupApp {
             this.nameInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') this.handleSubmit();
             });
+
+            // Play again button
+            this.playAgainBtn.addEventListener('click', this.handlePlayAgain);
 
             // Load saved name
             this.nameInput.value = localStorage.getItem('flappyPushupName') || '';
@@ -250,8 +255,9 @@ class FlappyPushupApp {
         }
 
         if (state === GameState.WAITING) {
-            // Hide submit form when waiting
+            // Hide UI elements when waiting
             this.submitForm.classList.add('hidden');
+            this.playAgainBtn.classList.add('hidden');
 
             if (this.movementDetected) {
                 // Start game when movement detected in waiting state
@@ -263,8 +269,9 @@ class FlappyPushupApp {
                 this.rank = null;
             }
         } else if (state === GameState.PLAYING) {
-            // Hide submit form while playing
+            // Hide UI elements while playing
             this.submitForm.classList.add('hidden');
+            this.playAgainBtn.classList.add('hidden');
         } else if (state === GameState.GAME_OVER) {
             // Show submit form if score > 0 and not yet submitted
             if (this.game.score > 0 && !this.scoreSubmitted) {
@@ -273,16 +280,22 @@ class FlappyPushupApp {
                 this.submitForm.classList.add('hidden');
             }
 
-            // Only allow restart after cooldown period
-            if (this.gameOverCooldown === 0 && this.movementDetected) {
-                this.game.reset();
-                this.movementDetected = false;
-                this.scoreSubmitted = false;
-                this.percentile = null;
-                this.rank = null;
-                this.submitForm.classList.add('hidden');
+            // Show play again button after cooldown
+            if (this.gameOverCooldown === 0) {
+                this.playAgainBtn.classList.remove('hidden');
+            } else {
+                this.playAgainBtn.classList.add('hidden');
             }
         }
+    }
+
+    handlePlayAgain() {
+        this.game.reset();
+        this.scoreSubmitted = false;
+        this.percentile = null;
+        this.rank = null;
+        this.submitForm.classList.add('hidden');
+        this.playAgainBtn.classList.add('hidden');
     }
 
     async handleSubmit() {
